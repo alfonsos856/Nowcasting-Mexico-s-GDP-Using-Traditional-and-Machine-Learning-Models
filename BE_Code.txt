@@ -1,0 +1,522 @@
+use "YOUR_WORKING_DIRECTORY_HERE/total_aggregated_variables_final_set.dta", clear
+
+gen ExchangeRate_PCFPY = 100 * (ExchangeRate - L4.ExchangeRate) / L4.ExchangeRate
+
+capture program drop extrapolate_3step
+program define extrapolate_3step
+    syntax varlist
+
+    foreach var of local varlist {
+        // ✅ Ensure the variable exists in the dataset
+        capture confirm variable `var'
+        if _rc != 0 {
+            display "⚠️ Variable `var' does not exist. Skipping..."
+            continue
+        }
+
+        // ✅ **Shorten `_filled` variable name if necessary**
+        local shortname = substr("`var'_filled", 1, 31)  // Max 32 characters
+        capture confirm variable `shortname'
+        if _rc != 0 {
+            gen `shortname' = `var'
+        }
+
+        // ✅ Iterate for 3-Step Ahead Predictions
+        forvalues h = 1/3 {
+            // ✅ Generate lag variables dynamically
+            capture drop L1_`var' L2_`var' L3_`var'
+            gen L1_`var' = L1.`shortname'
+            gen L2_`var' = L2.`shortname'
+            gen L3_`var' = L3.`shortname'
+
+            // ✅ Check if enough data exists
+            count if `shortname' != .
+            if r(N) > 10 {
+                // ✅ Run an autoregressive regression
+                reg `shortname' L1_`var' L2_`var' L3_`var' if `shortname' != .
+
+                // ✅ Predict missing values for this step
+                local shortpred = substr("`var'_step`h'", 1, 31)
+                capture drop `shortpred'
+                predict `shortpred' if `shortname' == .
+
+                // ✅ Fill `_filled` with new predictions
+                replace `shortname' = `shortpred' if `shortname' == .
+            } 
+            else {
+                display "⚠️ Skipping `var' (Step `h'): Not enough data for regression."
+            }
+
+            // ✅ Drop temporary variables after each step
+            capture drop `shortpred' L1_`var' L2_`var' L3_`var'
+        }
+    }
+end
+
+// ✅ Call the function for 3-step prediction
+extrapolate_3step USPrivateConsumptionExpenditu
+
+capture program drop extrapolate_6step
+program define extrapolate_6step
+    syntax varlist
+
+    foreach var of local varlist {
+        // ✅ Ensure the variable exists in the dataset
+        capture confirm variable `var'
+        if _rc != 0 {
+            display "⚠️ Variable `var' does not exist. Skipping..."
+            continue
+        }
+
+        // ✅ **Shorten `_filled` variable name if necessary**
+        local shortname = substr("`var'_filled", 1, 31)  // Max 32 characters
+        capture confirm variable `shortname'
+        if _rc != 0 {
+            gen `shortname' = `var'
+        }
+
+        // ✅ Iterate for 6-Step Ahead Predictions
+        forvalues h = 1/6 {
+            // ✅ Generate lag variables dynamically
+            capture drop L1_`var' L2_`var' L3_`var' L4_`var' L5_`var' L6_`var'
+            gen L1_`var' = L1.`shortname'
+            gen L2_`var' = L2.`shortname'
+            gen L3_`var' = L3.`shortname'
+            gen L4_`var' = L4.`shortname'
+            gen L5_`var' = L5.`shortname'
+            gen L6_`var' = L6.`shortname'
+
+            // ✅ Check if enough data exists
+            count if `shortname' != .
+            if r(N) > 10 {
+                // ✅ Run an autoregressive regression
+                reg `shortname' L1_`var' L2_`var' L3_`var' L4_`var' L5_`var' L6_`var' if `shortname' != .
+
+                // ✅ Predict missing values for this step
+                local shortpred = substr("`var'_step`h'", 1, 31)
+                capture drop `shortpred'
+                predict `shortpred' if `shortname' == .
+
+                // ✅ Fill `_filled` with new predictions
+                replace `shortname' = `shortpred' if `shortname' == .
+            } 
+            else {
+                display "⚠️ Skipping `var' (Step `h'): Not enough data for regression."
+            }
+
+            // ✅ Drop temporary variables after each step
+            capture drop `shortpred' L1_`var' L2_`var' L3_`var' L4_`var' L5_`var' L6_`var'
+        }
+    }
+end
+
+// ✅ Call the function for 6-step prediction
+extrapolate_6step construction_index_PCFPY
+
+
+capture program drop extrapolate_missing
+program define extrapolate_missing
+    syntax varlist
+
+    foreach var of local varlist {
+        // ✅ Ensure the variable exists in the dataset
+        capture confirm variable `var'
+        if _rc != 0 {
+            display "⚠️ Variable `var' does not exist. Skipping..."
+            continue
+        }
+
+        // ✅ **[CHANGED] Create a shorter new variable name (max 32 characters)**
+        local shortname = substr("`var'_filled", 1, 31)  // **Ensures the name does not exceed 32 characters**
+        gen `shortname' = `var'
+
+        // ✅ Generate lag variables (limit to 3 lags for stability)
+        gen L1_`var' = L1.`var'
+        gen L2_`var' = L2.`var'
+        gen L3_`var' = L3.`var'
+
+        // ✅ Ensure there are enough observations for regression
+        count if `var' != .  // Count non-missing observations
+        if r(N) > 10 {  // Require at least 10 observations for a meaningful regression
+
+            // ✅ Run an autoregressive regression only on non-missing values
+            reg `var' L1_`var' L2_`var' L3_`var' if `var' != .
+
+            // ✅ **[CHANGED] Predict missing values and store them in a shortened name**
+            local shortpred = substr("`var'_ext", 1, 31)  // **Shortened prediction variable**
+            predict `shortpred' if `var' == .
+
+            // ✅ **[CHANGED] Fill missing values in the new variable only**
+            replace `shortname' = `shortpred' if `shortname' == .  // **Uses the short variable name**
+        } 
+        else {
+            display "⚠️ Skipping `var': Not enough data for regression."
+        }
+
+        // ✅ Drop lag variables and temporary extrapolation variable
+        drop L1_`var' L2_`var' L3_`var' `shortpred'  // **[CHANGED] Now dropping `shortpred`**
+    }
+end
+
+// Call the function with the list of variables to extrapolate
+extrapolate_missing USGDPGrowthRate FDIintoMexicoGrowthRate TotalRetailTradeVolumeforM 
+
+
+// Save the updated dataset with extrapolated values
+save "/Users/masc145/Desktop/Masters/Masters Project Nowcasting/total_aggregated_variables_extrapolated.dta", replace
+
+* Define the list of variables to correlate with MexicoGDPINEGIPCFPY
+local vars UnemploymentInsuranceInitialC UnemploymentInsuranceContinued USGDPGrowthRate FDIintoMexicoGrowthRate USPrivateConsumptionExpenditu TotalRetailTradeVolumeforM ImportPriceIndexPCFPY RemittancesPCFPY ExchangeRateUSPesoLevels TotalUSCarSalesPCFPY USUnemploymentRate FederalFundsEffectiveRate USIndustralProductionIndexL USTotalConstructionSpending MexicoPrivateConsumptionPCFP Mexico_Private_Consumption_PCFPM MexicoIndustrialActivityIndex Mexico_Industrial_Activity_PCFPY MexicoToUSExportsLevels MexicoToUSImportsLevels MexicoUSTotalNetTradeExp Mexico_To_US_Net_Trade_PCFPM Mexico_To_US_Net_Trade_PCFPY CetesMexicanTBills28days TIIEMexicosInterestratefu TIIEat28daysaveragemonthly IGAE_INEGI_PCFPM MexicoTotalInflationIndex MexicoCoreInflationIndex MexicoTotalInflationPCFPY MexicoCoreInflationPCFPY CommercialRealEstatePriceInd MiningProductionIndexLevels ConstructionIndustryIndexLev qdate covid_dummy construction_index_PCFPY Minning_Production_index_PCFPY Commercial_real_estate_PCFPY US_Industrial_index_PCFPY IGAEINEGIsGlobalEconomicSt 
+
+* Count the number of variables
+local nvars = wordcount("`vars'")
+
+* Create an empty matrix to store results
+matrix corr_results = J(`nvars', 1, .)  // Pre-allocate matrix
+
+* Loop through each variable and compute correlation
+local row = 1
+foreach v in `vars' {
+    quietly correlate MexicoGDPINEGIPCFPY `v'
+    matrix corr_results[`row',1] = r(rho)  // Store correlation
+    
+    local row = `row' + 1
+}
+
+* Add row names (variable names)
+matrix rownames corr_results = `vars'
+
+* Add column names
+matrix colnames corr_results = "Correlation"
+
+* Display the table
+matrix list corr_results, format(%9.4f)
+
+* Define the list of variables to correlate with MexicoGDPINEGIPCFPY
+local vars UnemploymentInsuranceInitialC UnemploymentInsuranceContinued USGDPGrowthRate FDIintoMexicoGrowthRate USPrivateConsumptionExpenditu TotalRetailTradeVolumeforM ImportPriceIndexPCFPY RemittancesPCFPY ExchangeRateUSPesoLevels TotalUSCarSalesPCFPY USUnemploymentRate FederalFundsEffectiveRate USIndustralProductionIndexL USTotalConstructionSpending MexicoPrivateConsumptionPCFP Mexico_Private_Consumption_PCFPM MexicoIndustrialActivityIndex Mexico_Industrial_Activity_PCFPY MexicoToUSExportsLevels MexicoToUSImportsLevels MexicoUSTotalNetTradeExp Mexico_To_US_Net_Trade_PCFPM Mexico_To_US_Net_Trade_PCFPY CetesMexicanTBills28days TIIEMexicosInterestratefu TIIEat28daysaveragemonthly IGAE_INEGI_PCFPM MexicoTotalInflationIndex MexicoCoreInflationIndex MexicoTotalInflationPCFPY MexicoCoreInflationPCFPY CommercialRealEstatePriceInd MiningProductionIndexLevels ConstructionIndustryIndexLev qdate covid_dummy construction_index_PCFPY Minning_Production_index_PCFPY Commercial_real_estate_PCFPY US_Industrial_index_PCFPY IGAEINEGIsGlobalEconomicSt 
+
+* Count the number of variables
+local nvars = wordcount("`vars'")
+
+* Create an empty matrix to store results
+matrix corr_results = J(`nvars', 1, .)  // Pre-allocate matrix
+
+* Loop through each variable and compute correlation
+local row = 1
+foreach v in `vars' {
+    quietly correlate MexicoGDPINEGIPCFPY `v'
+    matrix corr_results[`row',1] = r(rho)  // Store correlation
+    
+    local row = `row' + 1
+}
+
+* Add row names (variable names)
+matrix rownames corr_results = `vars'
+matrix colnames corr_results = "Correlation"
+
+* Create empty lists for high and moderate correlations
+local high_corr_vars ""
+local moderate_corr_vars ""
+
+* Loop again to classify variables based on correlation values
+local row = 1
+foreach v in `vars' {
+    local corr_value = el(corr_results, `row', 1)  // Extract correlation value
+    
+    if abs(`corr_value') >= 0.50 {
+        local high_corr_vars "`high_corr_vars' `v'"
+    }
+    if abs(`corr_value') >= 0.30 {
+        local moderate_corr_vars "`moderate_corr_vars' `v'"
+    }
+    
+    local row = `row' + 1
+}
+
+
+* Display the lists
+display "🔹 Variables with |r| > 50%: `high_corr_vars'"
+display "🔸 Variables with |r| > 30%: `moderate_corr_vars'"
+
+foreach var in `moderate_corr_vars' {
+    varsoc `var', maxlag(5)
+}
+
+local vars CetesMexicanTBills28days covid_dummy Commercial_real_estate_PCFPY RemittancesPCFPY ExchangeRateUSPesoLevels Mexico_To_US_Net_Trade_PCFPY
+foreach var in `vars' {
+    varsoc `var', maxlag(5)
+}
+
+* Set the maximum number of lags to test
+*local max_lags = 5  // Adjust as needed
+
+* Run lag selection test
+*varsoc MexicoGDPINEGIPCFPY, maxlag(`max_lags')
+
+*reg MexicoGDPINEGIPCFPY L(1/15).MexicoGDPINEGIPCFPY
+
+
+
+
+
+* Ensure the original variable remains untouched
+capture drop USGDP_temp
+gen USGDP_temp = .
+
+capture drop obs_num
+gen obs_num = _n  // Row number
+
+capture drop start_num
+egen start_num = min(obs_num) if !missing(MexicoGDPINEGIPCFPY, UnemploymentInsuranceInitialC, UnemploymentInsuranceContinued, USGDPGrowthRate_filled, L5.USPrivateConsumptionExpenditu_f, TotalUSCarSalesPCFPY, MexicoPrivateConsumptionPCFP, L1.Mexico_Industrial_Activity_PCFPY, L4.Mexico_Industrial_Activity_PCFPY, US_Industrial_index_PCFPY, IGAEINEGIsGlobalEconomicSt)
+
+capture drop gdp_end
+egen gdp_end = max(obs_num) if !missing(MexicoGDPINEGIPCFPY, UnemploymentInsuranceInitialC, UnemploymentInsuranceContinued, USGDPGrowthRate_filled, L5.USPrivateConsumptionExpenditu_f, TotalUSCarSalesPCFPY, MexicoPrivateConsumptionPCFP, L1.Mexico_Industrial_Activity_PCFPY, L4.Mexico_Industrial_Activity_PCFPY, US_Industrial_index_PCFPY, IGAEINEGIsGlobalEconomicSt)
+
+capture drop mspe_BE1_AR
+gen mspe_BE1_AR = .
+
+capture drop yhat_BE1_AR
+gen yhat_BE1_AR = .
+
+capture drop initial_train_end
+gen initial_train_end = start_num + 80
+
+sum initial_train_end, meanonly
+scalar init_train_end = r(min)
+
+sum gdp_end, meanonly
+scalar gdp_final = r(max)
+
+forvalues i = `=init_train_end'/`=gdp_final' {
+    
+    local test_obs = `=`i'+1'
+
+    * Build temporary extrapolated USGDP variable
+    capture drop USGDP_temp
+    gen USGDP_temp = USGDPGrowthRate_filled
+    replace USGDP_temp = . if obs_num > `i'
+
+    * Generate lag variables
+    capture drop L1_USGDP_temp L2_USGDP_temp L3_USGDP_temp
+    gen L1_USGDP_temp = L1.USGDP_temp
+    gen L2_USGDP_temp = L2.USGDP_temp
+    gen L3_USGDP_temp = L3.USGDP_temp
+
+    * Estimate AR(3) on available portion
+    quietly reg USGDP_temp L1_USGDP_temp L2_USGDP_temp L3_USGDP_temp if obs_num <= `i' & USGDP_temp != .
+
+    * Predict the next value (ragged edge extrapolation)
+    capture drop USGDP_extrap
+    predict USGDP_extrap if obs_num == `test_obs'
+    replace USGDP_temp = USGDP_extrap if obs_num == `test_obs'
+
+    * Run the bridge equation using the extrapolated variable
+    quietly reg MexicoGDPINEGIPCFPY ///
+        UnemploymentInsuranceInitialC UnemploymentInsuranceContinued ///
+        USGDP_temp ///
+        L(5).USPrivateConsumptionExpenditu_f TotalUSCarSalesPCFPY ///
+        MexicoPrivateConsumptionPCFP L(1).Mexico_Industrial_Activity_PCFPY ///
+        L(4).Mexico_Industrial_Activity_PCFPY ///
+        US_Industrial_index_PCFPY IGAEINEGIsGlobalEconomicSt ///
+        if obs_num <= `i', robust
+
+    * Predict next value
+    capture drop yhat_dummy
+    predict yhat_dummy
+    replace yhat_BE1_AR = yhat_dummy if obs_num == `test_obs'
+    drop yhat_dummy
+
+    * Compute MSPE
+    replace mspe_BE1_AR = (MexicoGDPINEGIPCFPY - yhat_BE1_AR)^2 if obs_num == `test_obs'
+
+    * Clean up
+    capture drop USGDP_temp USGDP_extrap L1_USGDP_temp L2_USGDP_temp L3_USGDP_temp
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+*ACTUAL MSPE CODE BE1
+* Step 1: Ensure Time Index
+capture drop obs_num
+gen obs_num = _n  // Assign row numbers
+
+capture drop start_num
+egen start_num = min(obs_num) if !missing(MexicoGDPINEGIPCFPY, UnemploymentInsuranceInitialC, UnemploymentInsuranceContinued, L1.USGDPGrowthRate_filled, L5.USPrivateConsumptionExpenditu_f, TotalUSCarSalesPCFPY, MexicoPrivateConsumptionPCFP, L1.Mexico_Industrial_Activity_PCFPY, L4.Mexico_Industrial_Activity_PCFPY, US_Industrial_index_PCFPY, IGAEINEGIsGlobalEconomicSt)
+
+capture drop gdp_end
+egen gdp_end = max(obs_num) if !missing(MexicoGDPINEGIPCFPY, UnemploymentInsuranceInitialC, UnemploymentInsuranceContinued, L1.USGDPGrowthRate_filled, L5.USPrivateConsumptionExpenditu_f, TotalUSCarSalesPCFPY, MexicoPrivateConsumptionPCFP, L1.Mexico_Industrial_Activity_PCFPY, L4.Mexico_Industrial_Activity_PCFPY, US_Industrial_index_PCFPY, IGAEINEGIsGlobalEconomicSt)
+
+capture drop mspe_BE1 
+gen mspe_BE1 = .
+
+capture drop yhat_BE1 
+gen yhat_BE1 = .
+
+capture drop initial_train_end 
+gen initial_train_end = start_num + 80  // Start with the first 80 observations
+
+* Convert to scalars to use in the loop
+sum initial_train_end, meanonly
+scalar init_train_end = r(min)
+
+sum gdp_end, meanonly
+scalar gdp_final = r(max) + 1
+
+* Loop through expanding window cross-validation
+forvalues i = `=init_train_end' / `=gdp_final' {
+    
+    local train_end = `i'  // Define training period endpoint
+    local test_obs = `=`i' + 1'  // Next observation to predict
+
+    * Estimate the Model
+    quiet reg MexicoGDPINEGIPCFPY UnemploymentInsuranceInitialC UnemploymentInsuranceContinued L(1).USGDPGrowthRate_filled L(5).USPrivateConsumptionExpenditu_f TotalUSCarSalesPCFPY MexicoPrivateConsumptionPCFP L(1).Mexico_Industrial_Activity_PCFPY L(4).Mexico_Industrial_Activity_PCFPY US_Industrial_index_PCFPY IGAEINEGIsGlobalEconomicSt if obs_num <= `train_end', robust
+
+    * Predict next observation
+    capture drop yhat_dummy
+    predict yhat_dummy
+    replace yhat_BE1 = yhat_dummy if obs_num == `test_obs'
+    drop yhat_dummy
+
+    * Compute Squared Prediction Error (MSPE)
+    replace mspe_BE1 = (MexicoGDPINEGIPCFPY - yhat_BE1)^2 if obs_num == `test_obs'
+
+}
+
+
+reg MexicoGDPINEGIPCFPY UnemploymentInsuranceInitialC UnemploymentInsuranceContinued L(1).USGDPGrowthRate_filled L(5).USPrivateConsumptionExpenditu_f TotalUSCarSalesPCFPY MexicoPrivateConsumptionPCFP L(1).Mexico_Industrial_Activity_PCFPY L(4).Mexico_Industrial_Activity_PCFPY US_Industrial_index_PCFPY IGAEINEGIsGlobalEconomicSt, robust
+
+
+*ACTUAL MSPE CODE BE2
+* Step 1: Ensure Time Index
+capture drop obs_num
+gen obs_num = _n  // Assign row numbers
+
+capture drop start_num
+egen start_num = min(obs_num) if !missing(MexicoGDPINEGIPCFPY, L2.MexicoGDPINEGIPCFPY, UnemploymentInsuranceInitialC, UnemploymentInsuranceContinued, L4.USGDPGrowthRate_filled, L3.USPrivateConsumptionExpenditu_f, L1.TotalRetailTradeVolumeforM_fill, TotalUSCarSalesPCFPY, USUnemploymentRate, MexicoPrivateConsumptionPCFP, L4.Mexico_Industrial_Activity_PCFPY, L5.Minning_Production_index_PCFPY, US_Industrial_index_PCFPY, IGAEINEGIsGlobalEconomicSt)
+
+capture drop gdp_end
+egen gdp_end = max(obs_num) if !missing(MexicoGDPINEGIPCFPY, L2.MexicoGDPINEGIPCFPY, UnemploymentInsuranceInitialC, UnemploymentInsuranceContinued, L4.USGDPGrowthRate_filled, L3.USPrivateConsumptionExpenditu_f, L1.TotalRetailTradeVolumeforM_fill, TotalUSCarSalesPCFPY, USUnemploymentRate, MexicoPrivateConsumptionPCFP, L4.Mexico_Industrial_Activity_PCFPY, L5.Minning_Production_index_PCFPY, US_Industrial_index_PCFPY, IGAEINEGIsGlobalEconomicSt)
+
+capture drop mspe_BE2 
+gen mspe_BE2 = .
+
+capture drop yhat_BE2 
+gen yhat_BE2 = .
+
+capture drop initial_train_end 
+gen initial_train_end = start_num + 80  // Start with the first 80 observations
+
+* Convert to scalars to use in the loop
+sum initial_train_end, meanonly
+scalar init_train_end = r(min)
+
+sum gdp_end, meanonly
+scalar gdp_final = r(max) + 1
+
+* Loop through expanding window cross-validation
+forvalues i = `=init_train_end' / `=gdp_final' {
+    
+    local train_end = `i'  // Define training period endpoint
+    local test_obs = `=`i' + 1'  // Next observation to predict
+
+    * Estimate the Model
+    quiet reg MexicoGDPINEGIPCFPY L(2).MexicoGDPINEGIPCFPY UnemploymentInsuranceInitialC UnemploymentInsuranceContinued L(4).USGDPGrowthRate_filled L(3).USPrivateConsumptionExpenditu_f L(1).TotalRetailTradeVolumeforM_fill TotalUSCarSalesPCFPY USUnemploymentRate MexicoPrivateConsumptionPCFP L(4).Mexico_Industrial_Activity_PCFPY L(5).Minning_Production_index_PCFPY US_Industrial_index_PCFPY IGAEINEGIsGlobalEconomicSt if obs_num <= `train_end', robust
+
+    * Predict next observation
+    capture drop yhat_dummy
+    predict yhat_dummy
+    replace yhat_BE2 = yhat_dummy if obs_num == `test_obs'
+    drop yhat_dummy
+
+    * Compute Squared Prediction Error (MSPE)
+    replace mspe_BE2 = (MexicoGDPINEGIPCFPY - yhat_BE2)^2 if obs_num == `test_obs'
+
+}
+
+reg MexicoGDPINEGIPCFPY L(2).MexicoGDPINEGIPCFPY UnemploymentInsuranceInitialC UnemploymentInsuranceContinued L(4).USGDPGrowthRate_filled L(3).USPrivateConsumptionExpenditu_f L(1).TotalRetailTradeVolumeforM_fill TotalUSCarSalesPCFPY USUnemploymentRate MexicoPrivateConsumptionPCFP L(4).Mexico_Industrial_Activity_PCFPY L(5).Minning_Production_index_PCFPY US_Industrial_index_PCFPY IGAEINEGIsGlobalEconomicSt, robust
+
+
+*ACTUAL MSPE CODE BE3
+* Step 1: Ensure Time Index
+capture drop obs_num
+gen obs_num = _n  // Assign row numbers
+
+capture drop start_num
+egen start_num = min(obs_num) if !missing(MexicoGDPINEGIPCFPY, L2.MexicoGDPINEGIPCFPY, UnemploymentInsuranceInitialC, L2.UnemploymentInsuranceInitialC, L3.UnemploymentInsuranceInitialC, L2.UnemploymentInsuranceContinued, L1.USGDPGrowthRate_filled, L5.USPrivateConsumptionExpenditu_f, TotalRetailTradeVolumeforM_fill, TotalUSCarSalesPCFPY, USUnemploymentRate, MexicoPrivateConsumptionPCFP, Mexico_Industrial_Activity_PCFPY, L1.Minning_Production_index_PCFPY, L5.Minning_Production_index_PCFPY, L3.US_Industrial_index_PCFPY, L4.US_Industrial_index_PCFPY, IGAEINEGIsGlobalEconomicSt, L2.IGAEINEGIsGlobalEconomicSt, CetesMexicanTBills28days, L2.Commercial_real_estate_PCFPY, RemittancesPCFPY, ExchangeRate_PCFPY, Mexico_To_US_Net_Trade_PCFPY, covid_dummy)
+
+capture drop gdp_end
+egen gdp_end = max(obs_num) if !missing(MexicoGDPINEGIPCFPY, L2.MexicoGDPINEGIPCFPY, UnemploymentInsuranceInitialC, L2.UnemploymentInsuranceInitialC, L3.UnemploymentInsuranceInitialC, L2.UnemploymentInsuranceContinued, L1.USGDPGrowthRate_filled, L5.USPrivateConsumptionExpenditu_f, TotalRetailTradeVolumeforM_fill, TotalUSCarSalesPCFPY, USUnemploymentRate, MexicoPrivateConsumptionPCFP, Mexico_Industrial_Activity_PCFPY, L1.Minning_Production_index_PCFPY, L5.Minning_Production_index_PCFPY, L3.US_Industrial_index_PCFPY, L4.US_Industrial_index_PCFPY, IGAEINEGIsGlobalEconomicSt, L2.IGAEINEGIsGlobalEconomicSt, CetesMexicanTBills28days, L2.Commercial_real_estate_PCFPY, RemittancesPCFPY, ExchangeRate_PCFPY, Mexico_To_US_Net_Trade_PCFPY, covid_dummy)
+
+capture drop mspe_BE3 
+gen mspe_BE3 = .
+
+capture drop yhat_BE3 
+gen yhat_BE3 = .
+
+capture drop initial_train_end 
+gen initial_train_end = start_num + 80  // Start with the first 80 observations
+
+* Convert to scalars to use in the loop
+sum initial_train_end, meanonly
+scalar init_train_end = r(min)
+
+sum gdp_end, meanonly
+scalar gdp_final = r(max) + 1
+
+* Loop through expanding window cross-validation
+forvalues i = `=init_train_end' / `=gdp_final' {
+    
+    local train_end = `i'  // Define training period endpoint
+    local test_obs = `=`i' + 1'  // Next observation to predict
+
+    * Estimate the Model
+    quiet reg MexicoGDPINEGIPCFPY L(2).MexicoGDPINEGIPCFPY UnemploymentInsuranceInitialC L(2/3).UnemploymentInsuranceInitialC L(2).UnemploymentInsuranceContinued L(1).USGDPGrowthRate_filled L(5).USPrivateConsumptionExpenditu_f TotalRetailTradeVolumeforM_fill TotalUSCarSalesPCFPY USUnemploymentRate MexicoPrivateConsumptionPCFP Mexico_Industrial_Activity_PCFPY L(1).Minning_Production_index_PCFPY L(5).Minning_Production_index_PCFPY L(3/4).US_Industrial_index_PCFPY IGAEINEGIsGlobalEconomicSt L(2).IGAEINEGIsGlobalEconomicSt CetesMexicanTBills28days L(2).Commercial_real_estate_PCFPY RemittancesPCFPY ExchangeRate_PCFPY Mexico_To_US_Net_Trade_PCFPY covid_dummy if obs_num <= `train_end', robust
+
+    * Predict next observation
+    capture drop yhat_dummy
+    predict yhat_dummy
+    replace yhat_BE3 = yhat_dummy if obs_num == `test_obs'
+    drop yhat_dummy
+
+    * Compute Squared Prediction Error (MSPE)
+    replace mspe_BE3 = (MexicoGDPINEGIPCFPY - yhat_BE3)^2 if obs_num == `test_obs'
+
+}
+
+capture drop start_num gdp_end initial_train_end
+
+reg MexicoGDPINEGIPCFPY L(2).MexicoGDPINEGIPCFPY UnemploymentInsuranceInitialC L(2/3).UnemploymentInsuranceInitialC L(2).UnemploymentInsuranceContinued L(1).USGDPGrowthRate_filled L(5).USPrivateConsumptionExpenditu_f TotalRetailTradeVolumeforM_fill TotalUSCarSalesPCFPY USUnemploymentRate MexicoPrivateConsumptionPCFP Mexico_Industrial_Activity_PCFPY L(1).Minning_Production_index_PCFPY L(5).Minning_Production_index_PCFPY L(3/4).US_Industrial_index_PCFPY IGAEINEGIsGlobalEconomicSt L(2).IGAEINEGIsGlobalEconomicSt CetesMexicanTBills28days L(2).Commercial_real_estate_PCFPY RemittancesPCFPY ExchangeRate_PCFPY Mexico_To_US_Net_Trade_PCFPY covid_dummy, robust
+
+* Summarize MSPE
+sum mspe_BE1 mspe_BE1_AR mspe_BE2 mspe_BE3
+
+
+*To graph the prediction of the 3 models......
+twoway (line MexicoGDPINEGIPCFPY qdate if obs_num >= 385, lcolor(black) lpattern(solid) title("Actual vs Out of Sample GDP - BE Models") ytitle("Percent Change") xtitle("Time Year/Quarter")) (line yhat_BE1 qdate if obs_num >= 385, lcolor(red) lpattern(dash)) (line yhat_BE2 qdate if obs_num >= 385, lcolor(blue) lpattern(shortdash)) (line yhat_BE3 qdate if obs_num >= 385, lcolor(green) lpattern(shortdash)), legend(order(1 "Actual GDP" 2 "BE1" 3 "BE2" 4 "BE3"))
+
+
+twoway ///
+    (line mspe_BE1 qdate if obs_num >= 385, lcolor(red) lpattern(dash)) ///
+    (line mspe_BE2 qdate if obs_num >= 385, lcolor(blue) lpattern(shortdash)) ///
+    (line mspe_BE3 qdate if obs_num >= 385, lcolor(green) lpattern(shortdash)), ///
+    title("") ///
+    ytitle("MSPE") ///
+    xtitle("Time (Year/Quarter)") ///
+    legend(order(1 "BE1" 2 "BE2" 3 "BE3")) ///
+    scheme(s1color)
+
+* Export as PNG
+graph export "MSPE_Graph_BE1.png", replace width(2000)
+
+
+
