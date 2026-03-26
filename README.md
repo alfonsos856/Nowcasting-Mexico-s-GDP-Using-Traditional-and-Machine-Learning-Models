@@ -1,0 +1,2 @@
+# Nowcasting-Mexico-s-GDP-Using-Traditional-and-Machine-Learning-Models
+This repository contains the code and paper for a research project comparing traditional and machine learning nowcasting methods applied to Mexico's GDP. The project was completed as part of the MSc Economics program at the University of Edinburgh (April 2025). Authors: Alfonso Sanchez Mayes, Andras Podolyak, Patricia Farmosi, Samuel Grundy-Tenn
