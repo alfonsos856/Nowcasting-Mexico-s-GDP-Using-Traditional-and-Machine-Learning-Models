@@ -24,20 +24,27 @@ Two ensemble methods (uniform and regression-based weighting) were also tested b
 
 Note: I have only attached work for the sections that I worked in.
 
-Data
+
+
+
+Data:
+
 The data is included in this repository, and is freely available from the following public sources:
 
-Mexico GDP (PCFPY): INEGI — quarterly, from Q1 1993
+Mexico GDP (PCFPY): INEGI — Quarterly, from Q1 1993
 
-U.S. macroeconomic indicators: FRED (Federal Reserve Economic Data) — monthly and weekly series including unemployment claims, industrial production, car sales, and more
+U.S. macroeconomic indicators: FRED (Federal Reserve Economic Data) — Quarterly, monthly and weekly series including unemployment claims, industrial production, car sales, and more
 
-Mexico macroeconomic indicators: Banxico (Banco de México) — monthly series including IGAE, private consumption, industrial activity, remittances, exchange rate, and Cetes
+Mexico macroeconomic indicators: Banxico (Banco de México) — Quarterly, monthly series including IGAE, private consumption, industrial activity, remittances, exchange rate, and Cetes
 
 The dataset includes quarterly, monthly, and weekly indicators, requiring mixed-frequency handling. The ragged edge is addressed via vertical realignment (Altissimo et al., 2010). Missing tail values are extrapolated using autoregressive models.
 
 Once downloaded, organize the data into an Excel file (Project - Data.xlsx) with three sheets: Quarter, Monthly, and Weekly. For the Stata Bridge Equation code, a .dta file is required (total_aggregated_variables_final_set.dta).
 
-Key Methodological Notes
+
+
+
+Key Methodological Notes:
 
 Mixed-frequency problem: MIDAS handles this natively using the Almon polynomial lag structure. Bridge Equations use time-averaging (vertical realignment).
 
@@ -47,10 +54,20 @@ Model evaluation: All models are evaluated using expanding window out-of-sample 
 
 COVID period: Models are not explicitly adjusted for COVID, which accounts for a substantial share of prediction error across all specifications.
 
-Paper
+
+
+
+
+Paper:
+
 The full paper is available in the attached documents. It covers the literature review, data description, methodology, results, and conclusions in detail.
 
-Citation
+
+
+
+
+
+Citation:
 
 If you use this code or paper, please cite:
 
