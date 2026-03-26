@@ -9,10 +9,15 @@ Key result: MIDAS outperformed all other models, achieving 58% lower MSPE than t
 Models:
 
 Model           |   MSPE   |   D-M test  |
+
 Bridge Equation |  0.1521  |  Benchamrk  |
+
 MIDAS (Best)    |  0.0632  |      58%    |
+
 Elastic Net     |  0.108   |      29%    |
+
 SVR             |  0.3332  |     -119%   |
+
 Random Forest   |  7.7130  |     -4900%  |
 
 Two ensemble methods (uniform and regression-based weighting) were also tested but did not improve on the best individual MIDAS model.
@@ -33,7 +38,9 @@ Data
 The data is included in this repository, and is freely available from the following public sources:
 
 Mexico GDP (PCFPY): INEGI — quarterly, from Q1 1993
+
 U.S. macroeconomic indicators: FRED (Federal Reserve Economic Data) — monthly and weekly series including unemployment claims, industrial production, car sales, and more
+
 Mexico macroeconomic indicators: Banxico (Banco de México) — monthly series including IGAE, private consumption, industrial activity, remittances, exchange rate, and Cetes
 
 The dataset includes quarterly, monthly, and weekly indicators, requiring mixed-frequency handling. The ragged edge is addressed via vertical realignment (Altissimo et al., 2010). Missing tail values are extrapolated using autoregressive models.
