@@ -72,3 +72,131 @@ Citation:
 If you use this code or paper, please cite:
 
 Sanchez Mayes, A., Podolyak, A., Farmosi, P., & Grundy-Tenn, S. (2025). Nowcasting Mexico's GDP using Mixed Frequency Data with Traditional and Machine Learning Methods. University of Edinburgh.
+
+
+
+
+# Nowcasting Mexico's GDP  
+### Traditional vs Machine Learning Approaches  
+
+🎓 MSc Economics – University of Edinburgh  
+📅 April 2025  
+
+---
+
+## Overview
+
+This repository contains the code and research paper for a project comparing traditional econometric models and machine learning methods for nowcasting Mexico's GDP.
+
+The analysis uses mixed-frequency macroeconomic data and evaluates multiple model families against a standard Bridge Equation benchmark using real-time out-of-sample forecasts.
+
+---
+
+## Key Contributions
+
+- First application (to our knowledge) of MIDAS and modern machine learning methods to nowcast Mexico's GDP  
+- Comprehensive comparison across five model families  
+- Evaluation using expanding window out-of-sample forecasts (2011–2024)  
+- Strong empirical evidence that MIDAS significantly outperforms traditional benchmarks  
+
+---
+
+## Results
+
+| Model            | MSPE   | Performance vs Benchmark |
+|------------------|--------|--------------------------|
+| Bridge Equation  | 0.1521 | Baseline                 |
+| MIDAS ⭐         | 0.0632 | **+58% improvement**     |
+| Elastic Net      | 0.1080 | +29%                     |
+| SVR              | 0.3332 | -119%                    |
+| Random Forest    | 7.7130 | -4900%                   |
+
+Two ensemble methods (uniform and regression-based weighting) were also tested but did not outperform the best individual MIDAS specification.
+
+---
+
+## Data
+
+The dataset combines publicly available macroeconomic data from multiple sources:
+
+- 🇲🇽 **INEGI**: Mexico GDP (Quarterly, Q1 1993–present)  
+- 🇺🇸 **FRED**: U.S. macroeconomic indicators (monthly and weekly), including unemployment claims, industrial production, and car sales  
+- 🇲🇽 **Banxico**: Mexican macroeconomic indicators (monthly and quarterly), including IGAE, private consumption, industrial activity, remittances, exchange rates, and Cetes  
+
+### Data Structure
+
+The data should be organized into an Excel file (`Project - Data.xlsx`) with the following sheets:
+
+- `Quarter`  
+- `Monthly`  
+- `Weekly`  
+
+For the Bridge Equation implementation in Stata, a `.dta` file is required:
+
+- `total_aggregated_variables_final_set.dta`
+
+Mixed-frequency challenges are addressed through vertical realignment and autoregressive extrapolation of missing tail values.
+
+---
+
+## Methodology
+
+- **Mixed-frequency handling**  
+  - MIDAS: Almon polynomial lag structure  
+  - Bridge Equation: Time aggregation  
+
+- **Ragged edge problem**  
+  - Addressed via vertical realignment (Altissimo et al., 2010)  
+
+- **Missing data**  
+  - Tail values extrapolated using AR(3) or AR(12) models depending on frequency  
+
+- **Model evaluation**  
+  - Expanding window out-of-sample cross-validation  
+  - 58 forecasts generated from 2011 to 2024  
+
+- **COVID period**  
+  - Not explicitly modeled  
+  - Accounts for a significant portion of prediction error across specifications  
+
+---
+
+## How to Run
+
+1. Download and organize the data into `Project - Data.xlsx`  
+2. Ensure sheets are labeled:
+   - `Quarter`
+   - `Monthly`
+   - `Weekly`  
+3. Prepare the Stata dataset:
+   - `total_aggregated_variables_final_set.dta`  
+4. Run the model scripts in their respective folders  
+
+---
+
+## Authors
+
+- Alfonso Sanchez Mayes  
+- Andras Podolyak  
+- Patricia Farmosi  
+- Samuel Grundy-Tenn  
+
+---
+
+> Note: This repository includes only the sections of the project developed by the author.
+
+---
+
+## Paper
+
+The full paper is included in this repository and provides a detailed discussion of the literature, data, methodology, results, and conclusions.
+
+---
+
+## Citation
+
+If you use this code or paper, please cite:
+
+Sanchez Mayes, A., Podolyak, A., Farmosi, P., & Grundy-Tenn, S. (2025).  
+*Nowcasting Mexico's GDP using Mixed Frequency Data with Traditional and Machine Learning Methods*.  
+University of Edinburgh.
