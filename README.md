@@ -58,7 +58,66 @@ Two ensemble methods (uniform and regression-based weighting) were also tested b
 
 - The full paper is available in the attached documents. It covers the literature review, data description, methodology, results, and conclusions in detail.
 
+---
+## How to Run
 
+### Bridge Equation Models (Stata)
+
+**Requirements:**  
+Stata (any recent version)
+
+**Steps:**
+
+1. Open the Bridge Equation text file.
+
+2. Copy and paste its contents into the Stata Command Window or Do-file editor.
+
+3. Update the file path at the top of the script:
+
+```stata
+use "YOUR_WORKING_DIRECTORY_HERE/total_aggregated_variables_final_set.dta", clear
+```
+
+4. Run the code.
+
+**What the script does:**
+
+- Extrapolates missing values using autoregressive (AR) models  
+- Computes correlations to guide variable selection  
+- Fits three Bridge Equation specifications (BE1, BE2, BE3)  
+- Performs expanding window out-of-sample cross-validation  
+- Outputs MSPE values and plots comparing predicted vs. actual GDP  
+
+---
+
+### MIDAS Models (R)
+
+**Requirements:**  
+R with the following packages:  
+`dplyr`, `tidyr`, `readxl`, `midasr`, `ggplot2`, `tseries`, `MSwM`
+
+**Steps:**
+
+1. Open the `MIDAS.R` script.
+
+2. Set your working directory at the top of the file:
+
+```r
+setwd("YOUR_WORKING_DIRECTORY_HERE")
+```
+
+3. Place `Project - Data.xlsx` in that directory.
+
+4. Run the full script.
+
+**What the script does:**
+
+- Extrapolates missing tail values using AR models  
+- Converts level variables into year-over-year growth rates  
+- Performs AIC-based grid search for optimal MIDAS starting values  
+- Fits three MIDAS specifications (MIDAS1, MIDAS2, MIDAS3)  
+- Performs expanding window out-of-sample cross-validation  
+- Outputs MSPE values and plots comparing predicted vs. actual GDP  
 ---
 
 
