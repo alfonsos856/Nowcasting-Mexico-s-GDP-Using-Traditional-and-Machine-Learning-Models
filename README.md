@@ -25,13 +25,21 @@ Two ensemble methods (uniform and regression-based weighting) were also tested b
 
 Repository Structure:
 nowcasting-mexico-gdp/
+
 ├── README.md
+
 ├── paper/
+
 │   └── Nowcasting_Mexico_GDP.pdf       # Full paper
+
 ├── code/
+
 │   ├── MIDAS.R                         # MIDAS models (R)
+
 │   └── Bridge_Equation.do              # Bridge Equation models (Stata)
+
 └── data/
+
     └── README_data.md                  # Data sources and download instructions
 
 Data
