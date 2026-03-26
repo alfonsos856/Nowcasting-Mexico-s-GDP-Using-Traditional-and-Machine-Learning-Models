@@ -52,4 +52,5 @@ U.S. macroeconomic indicators: FRED (Federal Reserve Economic Data) — monthly 
 Mexico macroeconomic indicators: Banxico (Banco de México) — monthly series including IGAE, private consumption, industrial activity, remittances, exchange rate, and Cetes
 
 The dataset includes quarterly, monthly, and weekly indicators, requiring mixed-frequency handling. The ragged edge is addressed via vertical realignment (Altissimo et al., 2010). Missing tail values are extrapolated using autoregressive models.
+
 Once downloaded, organize the data into an Excel file (Project - Data.xlsx) with three sheets: Quarter, Monthly, and Weekly. For the Stata Bridge Equation code, a .dta file is required (total_aggregated_variables_final_set.dta).
